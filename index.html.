@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>NEXUS HAND LINK v0.1</title>
+<style>
+*{box-sizing:border-box} body{margin:0;background:#030916;color:#dff8ff;font-family:system-ui,Arial,sans-serif;overflow:hidden}
+header{position:absolute;z-index:3;top:12px;left:14px;right:14px;display:flex;justify-content:space-between;align-items:center}
+h1{font-size:17px;letter-spacing:3px;margin:0;color:#8cecff} #status{font-size:12px;color:#9bb9c8}
+#stage{position:absolute;inset:0;display:grid;place-items:center}
+video,canvas{position:absolute;width:100%;height:100%;object-fit:cover}
+video{transform:scaleX(-1);opacity:.48} canvas{transform:scaleX(-1)}
+#orb{position:absolute;width:120px;height:120px;border-radius:50%;pointer-events:none;background:radial-gradient(circle at 35% 30%,#eaffff 0%,#75eaff 9%,#168bff 35%,#073b9b 62%,#020b28 78%);box-shadow:0 0 22px #31baff,0 0 65px #087bff, inset -12px -14px 25px #020b48;opacity:.88;transform:translate(-50%,-50%);transition:width .12s,height .12s}
+#orb:after{content:"";position:absolute;inset:-18px;border:1px solid #52dfff88;border-radius:50%;box-shadow:0 0 24px #1aaaff66;animation:pulse 2s infinite}
+@keyframes pulse{50%{transform:scale(1.18);opacity:.35}}
+.panel{position:absolute;z-index:4;bottom:18px;left:14px;right:14px;background:#071629dd;border:1px solid #1a668b;border-radius:16px;padding:12px}
+#gesture{font-size:18px;font-weight:700;color:#8cecff} .hint{font-size:12px;color:#9bb9c8;margin-top:5px}
+button{background:#0879c9;color:white;border:0;border-radius:12px;padding:12px 16px;font-weight:700;font-size:15px;width:100%;margin-top:9px}
+small{color:#9bb9c8;display:block;margin-top:7px}
+</style>
+</head>
+<body>
+<header><h1>NEXUS / HAND LINK</h1><div id="status">SYSTEM STANDBY</div></header>
+<div id="stage">
+ <video id="cam" autoplay playsinline muted></video>
+ <canvas id="draw"></canvas>
+ <div id="orb"></div>
+</div>
+<div class="panel">
+ <div id="gesture">Ready to connect</div>
+ <div class="hint" id="hint">Tap START CAMERA, then show one hand.</div>
+ <button id="start">START CAMERA</button>
+ <small>Prototype v0.1 · Camera frames are processed on this device by MediaPipe. Internet is needed to load the model.</small>
+</div>
+<script type="module">
+import { FilesetResolver, HandLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs";
+const video=document.getElementById('cam'), canvas=document.getElementById('draw'), ctx=canvas.getContext('2d');
+const status=document.getElementById('status'), gesture=document.getElementById('gesture'), hint=document.getElementById('hint'), orb=document.getElementById('orb'), start=document.getElementById('start');
+let landmarker=null, stream=null, running=false, lastVideoTime=-1;
+const links=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+function resize(){canvas.width=innerWidth*devicePixelRatio;canvas.height=innerHeight*devicePixelRatio;ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0)}
+addEventListener('resize',resize);resize();
+function drawHand(points){
+ ctx.lineWidth=3;ctx.strokeStyle='#54eaff';ctx.shadowColor='#00bfff';ctx.shadowBlur=10;
+ for(const [a,b] of links){ctx.beginPath();ctx.moveTo(points[a].x*innerWidth,points[a].y*innerHeight);ctx.lineTo(points[b].x*innerWidth,points[b].y*innerHeight);ctx.stroke()}
+ ctx.fillStyle='#eaffff';ctx.shadowBlur=12;
+ for(const p of points){ctx.beginPath();ctx.arc(p.x*innerWidth,p.y*innerHeight,3.2,0,Math.PI*2);ctx.fill()}
+ ctx.shadowBlur=0;
+}
+function countFingers(p){
+ // Approximate open-finger test for a palm facing the camera.
+ let count=0;
+ for(const [tip,pip] of [[8,6],[12,10],[16,14],[20,18]]) if(p[tip].y<p[pip].y) count++;
+ if(Math.abs(p[4].x-p[2].x)>0.055) count++;
+ return count;
+}
+async function boot(){
+ try{
+  status.textContent='LOADING AI MODEL…';hint.textContent='Please keep this page open while the hand model downloads.';
+  const vision=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm');
+  landmarker=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',delegate:'GPU'},runningMode:'VIDEO',numHands:1});
+  stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'user',width:{ideal:640},height:{ideal:480}}});
+  video.srcObject=stream;await video.play();running=true;start.textContent='STOP CAMERA';status.textContent='NEXUS ONLINE';hint.textContent='Move your hand: the blue sphere follows your palm.';requestAnimationFrame(loop);
+ }catch(e){status.textContent='SETUP ERROR';hint.textContent=(e.name||'Error')+': '+(e.message||'Could not start. Check internet and camera permission.');}
+}
+function loop(){
+ if(!running)return;
+ if(video.readyState>=2 && video.currentTime!==lastVideoTime){
+  lastVideoTime=video.currentTime;
+  const w=innerWidth,h=innerHeight;ctx.clearRect(0,0,w,h);
+  try{
+   const result=landmarker.detectForVideo(video,performance.now());
+   if(result.landmarks&&result.landmarks.length){
+    const p=result.landmarks[0];drawHand(p);
+    const palm=[0,5,9,13,17].reduce((a,i)=>({x:a.x+p[i].x/5,y:a.y+p[i].y/5}),{x:0,y:0});
+    orb.style.left=(palm.x*w)+'px';orb.style.top=(palm.y*h)+'px';
+    const n=countFingers(p);
+    if(n>=4){gesture.textContent='OPEN PALM — ENERGY ACTIVE';orb.style.width='145px';orb.style.height='145px';}
+    else if(n<=1){gesture.textContent='CLOSED / PARTIAL FIST — ENERGY LOW';orb.style.width='82px';orb.style.height='82px';}
+    else{gesture.textContent='GESTURE LINK — '+n+' FINGERS';orb.style.width='115px';orb.style.height='115px';}
+    hint.textContent='Hand detected · Move your palm to move the sphere.';
+   }else{gesture.textContent='SEARCHING FOR HAND…';hint.textContent='Show your full hand in good light.';}
+  }catch(e){status.textContent='TRACKING ERROR';hint.textContent=e.message;}
+ }
+ requestAnimationFrame(loop);
+}
+start.addEventListener('click',()=>{
+ if(running){running=false;if(stream)stream.getTracks().forEach(t=>t.stop());video.srcObject=null;ctx.clearRect(0,0,innerWidth,innerHeight);start.textContent='START CAMERA';status.textContent='SYSTEM STANDBY';gesture.textContent='Disconnected';hint.textContent='Tap START CAMERA to reconnect.';}
+ else boot();
+});
+</script>
+</body>
+</html>

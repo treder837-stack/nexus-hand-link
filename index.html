@@ -3,39 +3,91 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>NEXUS HAND LINK v0.1</title>
+<meta name="theme-color" content="#030916">
+<title>NEXUS HAND LINK v0.2</title>
 <style>
-*{box-sizing:border-box} body{margin:0;background:#030916;color:#dff8ff;font-family:system-ui,Arial,sans-serif;overflow:hidden}
-header{position:absolute;z-index:3;top:12px;left:14px;right:14px;display:flex;justify-content:space-between;align-items:center}
-h1{font-size:17px;letter-spacing:3px;margin:0;color:#8cecff} #status{font-size:12px;color:#9bb9c8}
-#stage{position:absolute;inset:0;display:grid;place-items:center}
-video,canvas{position:absolute;width:100%;height:100%;object-fit:cover}
-video{transform:scaleX(-1);opacity:.48} canvas{transform:scaleX(-1)}
-#orb{position:absolute;width:120px;height:120px;border-radius:50%;pointer-events:none;background:radial-gradient(circle at 35% 30%,#eaffff 0%,#75eaff 9%,#168bff 35%,#073b9b 62%,#020b28 78%);box-shadow:0 0 22px #31baff,0 0 65px #087bff,inset -12px -14px 25px #020b48;opacity:.88;transform:translate(-50%,-50%);transition:width .12s,height .12s}
+*{box-sizing:border-box}body{margin:0;background:#030916;color:#dff8ff;font-family:system-ui,Arial,sans-serif;overflow:hidden}
+header{position:absolute;z-index:5;top:12px;left:14px;right:14px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+h1{font-size:16px;letter-spacing:2px;margin:0;color:#8cecff}#status{font-size:11px;color:#9bb9c8;text-align:right}
+#stage{position:absolute;inset:0;overflow:hidden}video,canvas{position:absolute;width:100%;height:100%;object-fit:cover}
+video{transform:scaleX(-1);opacity:.42}canvas{transform:scaleX(-1);pointer-events:none}
+#orb{position:absolute;left:50%;top:43%;width:116px;height:116px;border-radius:50%;pointer-events:none;background:radial-gradient(circle at 35% 30%,#eaffff 0%,#75eaff 9%,#168bff 35%,#073b9b 62%,#020b28 78%);box-shadow:0 0 22px #31baff,0 0 65px #087bff,inset -12px -14px 25px #020b48;opacity:.9;transform:translate(-50%,-50%);transition:width .14s,height .14s,opacity .2s}
 #orb:after{content:"";position:absolute;inset:-18px;border:1px solid #52dfff88;border-radius:50%;box-shadow:0 0 24px #1aaaff66;animation:pulse 2s infinite}
 @keyframes pulse{50%{transform:scale(1.18);opacity:.35}}
-.panel{position:absolute;z-index:4;bottom:18px;left:14px;right:14px;background:#071629dd;border:1px solid #1a668b;border-radius:16px;padding:12px}
-#gesture{font-size:18px;font-weight:700;color:#8cecff}.hint{font-size:12px;color:#9bb9c8;margin-top:5px}
-button{background:#0879c9;color:white;border:0;border-radius:12px;padding:12px 16px;font-weight:700;font-size:15px;width:100%;margin-top:9px}
-small{color:#9bb9c8;display:block;margin-top:7px}
+#shield{display:none;position:absolute;left:50%;top:43%;width:230px;height:230px;border:3px solid #72eaff;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 24px #29caff, inset 0 0 34px #168bff66,0 0 75px #087bff88;pointer-events:none;animation:shieldpulse 1.6s ease-in-out infinite}
+#shield:before,#shield:after{content:"";position:absolute;inset:13px;border:1px dashed #9cf4ff;border-radius:45% 55% 50% 50%}
+#shield:after{transform:rotate(60deg)}@keyframes shieldpulse{50%{scale:1.08;opacity:.55}}
+.panel{position:absolute;z-index:6;bottom:12px;left:12px;right:12px;background:#071629ed;border:1px solid #1a668b;border-radius:16px;padding:11px}
+#gesture{font-size:16px;font-weight:750;color:#8cecff}#hint{font-size:12px;color:#a8c4d2;margin-top:4px;min-height:30px}
+.stats{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#9bb9c8;margin-top:6px}
+button{background:#0879c9;color:white;border:0;border-radius:12px;padding:12px 16px;font-weight:700;font-size:15px;width:100%;margin-top:8px}
+small{color:#8faab9;display:block;margin-top:7px;font-size:10px}
 </style>
 </head>
 <body>
-<header><h1>NEXUS / HAND LINK</h1><div id="status">SYSTEM STANDBY</div></header>
-<div id="stage"><video id="cam" autoplay playsinline muted></video><canvas id="draw"></canvas><div id="orb"></div></div>
-<div class="panel"><div id="gesture">Ready to connect</div><div class="hint" id="hint">Tap START CAMERA, then show one hand.</div><button id="start">START CAMERA</button><small>Prototype v0.1 · Camera frames are processed on this device by MediaPipe. Internet is needed to load the model.</small></div>
+<header><h1>NEXUS / HAND LINK <span style="color:#6daac0">v0.2</span></h1><div id="status">SYSTEM STANDBY</div></header>
+<div id="stage"><video id="cam" autoplay playsinline muted></video><canvas id="draw"></canvas><div id="orb"></div><div id="shield"></div></div>
+<div class="panel">
+ <div id="gesture">Ready to connect</div><div id="hint">Tap START CAMERA, then show one or two hands.</div>
+ <div class="stats"><span id="hands">Hands: 0 / 2</span><span id="mode">Mode: standby</span></div>
+ <button id="start">START CAMERA</button>
+ <small>Gesture commands: one open palm = activate · two open palms = shield · two fingers = pulse · fist = energy low. Two palms control core size. Camera processing stays on this device; internet loads the model.</small>
+</div>
 <script type="module">
 import { FilesetResolver, HandLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs";
 const video=document.getElementById('cam'),canvas=document.getElementById('draw'),ctx=canvas.getContext('2d');
-const status=document.getElementById('status'),gesture=document.getElementById('gesture'),hint=document.getElementById('hint'),orb=document.getElementById('orb'),start=document.getElementById('start');
-let landmarker=null,stream=null,running=false,lastVideoTime=-1;
+const status=document.getElementById('status'),gesture=document.getElementById('gesture'),hint=document.getElementById('hint'),orb=document.getElementById('orb'),shield=document.getElementById('shield'),start=document.getElementById('start'),handsLabel=document.getElementById('hands'),modeLabel=document.getElementById('mode');
+let landmarker=null,stream=null,running=false,lastVideoTime=-1,pulseUntil=0;
 const links=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
 function resize(){canvas.width=innerWidth*devicePixelRatio;canvas.height=innerHeight*devicePixelRatio;ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0)}
 addEventListener('resize',resize);resize();
-function drawHand(points){ctx.lineWidth=3;ctx.strokeStyle='#54eaff';ctx.shadowColor='#00bfff';ctx.shadowBlur=10;for(const [a,b] of links){ctx.beginPath();ctx.moveTo(points[a].x*innerWidth,points[a].y*innerHeight);ctx.lineTo(points[b].x*innerWidth,points[b].y*innerHeight);ctx.stroke()}ctx.fillStyle='#eaffff';ctx.shadowBlur=12;for(const p of points){ctx.beginPath();ctx.arc(p.x*innerWidth,p.y*innerHeight,3.2,0,Math.PI*2);ctx.fill()}ctx.shadowBlur=0}
-function countFingers(p){let count=0;for(const [tip,pip] of [[8,6],[12,10],[16,14],[20,18]])if(p[tip].y<p[pip].y)count++;if(Math.abs(p[4].x-p[2].x)>0.055)count++;return count}
-async function boot(){try{status.textContent='LOADING AI MODEL…';hint.textContent='Please keep this page open while the hand model downloads.';const vision=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm');landmarker=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',delegate:'CPU'},runningMode:'VIDEO',numHands:1});stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'user',width:{ideal:640},height:{ideal:480}}});video.srcObject=stream;await video.play();running=true;start.textContent='STOP CAMERA';status.textContent='NEXUS ONLINE';hint.textContent='Move your hand: the blue sphere follows your palm.';requestAnimationFrame(loop)}catch(e){status.textContent='SETUP ERROR';hint.textContent=(e.name||'Error')+': '+(e.message||'Could not start. Check internet and camera permission.')}} 
-function loop(){if(!running)return;if(video.readyState>=2&&video.currentTime!==lastVideoTime){lastVideoTime=video.currentTime;ctx.clearRect(0,0,innerWidth,innerHeight);try{const result=landmarker.detectForVideo(video,performance.now());if(result.landmarks&&result.landmarks.length){const p=result.landmarks[0];drawHand(p);const palm=[0,5,9,13,17].reduce((a,i)=>({x:a.x+p[i].x/5,y:a.y+p[i].y/5}),{x:0,y:0});orb.style.left=((1-palm.x)*innerWidth)+'px';orb.style.top=(palm.y*innerHeight)+'px';const n=countFingers(p);if(n>=4){gesture.textContent='OPEN PALM — ENERGY ACTIVE';orb.style.width='145px';orb.style.height='145px'}else if(n<=1){gesture.textContent='CLOSED / PARTIAL FIST — ENERGY LOW';orb.style.width='82px';orb.style.height='82px'}else{gesture.textContent='GESTURE LINK — '+n+' FINGERS';orb.style.width='115px';orb.style.height='115px'}hint.textContent='Hand detected · Move your palm to move the sphere.'}else{gesture.textContent='SEARCHING FOR HAND…';hint.textContent='Show your full hand in good light.'}}catch(e){status.textContent='TRACKING ERROR';hint.textContent=e.message}}requestAnimationFrame(loop)}
-start.addEventListener('click',()=>{if(running){running=false;if(stream)stream.getTracks().forEach(t=>t.stop());video.srcObject=null;ctx.clearRect(0,0,innerWidth,innerHeight);start.textContent='START CAMERA';status.textContent='SYSTEM STANDBY';gesture.textContent='Disconnected';hint.textContent='Tap START CAMERA to reconnect.'}else boot()});
+function drawHand(points){ctx.lineWidth=3;ctx.strokeStyle='#54eaff';ctx.shadowColor='#00bfff';ctx.shadowBlur=10;for(const [a,b] of links){ctx.beginPath();ctx.moveTo(points[a].x*innerWidth,points[a].y*innerHeight);ctx.lineTo(points[b].x*innerWidth,points[b].y*innerHeight);ctx.stroke()}ctx.fillStyle='#eaffff';ctx.shadowBlur=12;for(const p of points){ctx.beginPath();ctx.arc(p.x*innerWidth,p.y*innerHeight,3,0,Math.PI*2);ctx.fill()}ctx.shadowBlur=0}
+function fingerCount(p){let n=0;for(const [tip,pip] of [[8,6],[12,10],[16,14],[20,18]])if(p[tip].y<p[pip].y)n++;if(Math.abs(p[4].x-p[2].x)>0.055)n++;return n}
+function palmCenter(p){return [0,5,9,13,17].reduce((a,i)=>({x:a.x+p[i].x/5,y:a.y+p[i].y/5}),{x:0,y:0})}
+function distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+async function boot(){
+ try{
+  if(!navigator.mediaDevices?.getUserMedia)throw new Error('Camera access needs HTTPS. Open the GitHub Pages website.');
+  status.textContent='LOADING AI MODEL…';hint.textContent='Downloading hand-tracking model. Keep this page open.';
+  const vision=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm');
+  landmarker=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',delegate:'CPU'},runningMode:'VIDEO',numHands:2});
+  stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'user',width:{ideal:640},height:{ideal:480}}});
+  video.srcObject=stream;await video.play();running=true;start.textContent='STOP CAMERA';status.textContent='NEXUS ONLINE';hint.textContent='Show one or two hands to control the energy core.';requestAnimationFrame(loop);
+ }catch(e){status.textContent='SETUP ERROR';hint.textContent=(e.name||'Error')+': '+(e.message||'Check internet and camera permission.');}
+}
+function loop(){
+ if(!running)return;
+ if(video.readyState>=2&&video.currentTime!==lastVideoTime){
+  lastVideoTime=video.currentTime;ctx.clearRect(0,0,innerWidth,innerHeight);
+  try{
+   const result=landmarker.detectForVideo(video,performance.now()),all=result.landmarks||[],count=all.length;
+   handsLabel.textContent='Hands: '+count+' / 2';
+   if(count){
+    const centers=[];
+    all.forEach(p=>{drawHand(p);centers.push(palmCenter(p))});
+    const mid=count===2?{x:(centers[0].x+centers[1].x)/2,y:(centers[0].y+centers[1].y)/2}:centers[0];
+    orb.style.left=((1-mid.x)*innerWidth)+'px';orb.style.top=(mid.y*innerHeight)+'px';
+    if(count===2){
+      const span=distance(centers[0],centers[1]);const size=Math.max(90,Math.min(230,90+span*260));
+      orb.style.width=size+'px';orb.style.height=size+'px';
+      const bothOpen=all.every(p=>fingerCount(p)>=4);
+      if(bothOpen){shield.style.display='block';shield.style.left=((1-mid.x)*innerWidth)+'px';shield.style.top=(mid.y*innerHeight)+'px';shield.style.width=(size+100)+'px';shield.style.height=(size+100)+'px';gesture.textContent='ENERGY SHIELD — ACTIVE';modeLabel.textContent='Mode: shield';hint.textContent='Bring your open palms closer or farther apart to resize the core.'}
+      else{shield.style.display='none';gesture.textContent='TWO-HAND CORE CONTROL';modeLabel.textContent='Mode: two-hand';hint.textContent='Move both hands to move the core; spread hands to expand it.'}
+    }else{
+      shield.style.display='none';const n=fingerCount(all[0]);
+      if(n>=4){orb.style.width='145px';orb.style.height='145px';gesture.textContent='OPEN PALM — ENERGY ACTIVE';modeLabel.textContent='Mode: active';hint.textContent='Open palm activates the core. Show two open palms for shield mode.'}
+      else if(n===2){orb.style.width='175px';orb.style.height='175px';gesture.textContent='TWO-FINGER COMMAND — PULSE';modeLabel.textContent='Mode: pulse';pulseUntil=performance.now()+450;hint.textContent='Pulse command recognized. Hold two fingers up to trigger again.'}
+      else if(n<=1){orb.style.width='82px';orb.style.height='82px';gesture.textContent='FIST — ENERGY LOW';modeLabel.textContent='Mode: low power';hint.textContent='Open your palm to reactivate the energy core.'}
+      else{orb.style.width='115px';orb.style.height='115px';gesture.textContent='GESTURE LINK — '+n+' FINGERS';modeLabel.textContent='Mode: gesture';hint.textContent='Try an open palm, fist, two fingers, or both open palms.'}
+    }
+    if(performance.now()<pulseUntil){orb.style.boxShadow='0 0 45px #bafaff,0 0 110px #08caff,inset -12px -14px 25px #020b48'}else{orb.style.boxShadow='0 0 22px #31baff,0 0 65px #087bff,inset -12px -14px 25px #020b48'}
+   }else{shield.style.display='none';gesture.textContent='SEARCHING FOR HAND…';modeLabel.textContent='Mode: standby';hint.textContent='Show your full hand in good light, 30–70 cm from camera.'}
+  }catch(e){status.textContent='TRACKING ERROR';hint.textContent=e.message}
+ }
+ requestAnimationFrame(loop);
+}
+function stop(){running=false;if(stream)stream.getTracks().forEach(t=>t.stop());video.srcObject=null;ctx.clearRect(0,0,innerWidth,innerHeight);shield.style.display='none';start.textContent='START CAMERA';status.textContent='SYSTEM STANDBY';gesture.textContent='Disconnected';handsLabel.textContent='Hands: 0 / 2';modeLabel.textContent='Mode: standby';hint.textContent='Tap START CAMERA to reconnect.'}
+start.addEventListener('click',()=>running?stop():boot());
 </script>
-</body></html>
+</body>
+</html>
